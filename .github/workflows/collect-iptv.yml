@@ -1,4 +1,4 @@
-name: 频道直播源采集
+name: IPTV直播源采集
 
 on:
   workflow_dispatch:
