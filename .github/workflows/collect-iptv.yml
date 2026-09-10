@@ -3,10 +3,15 @@ name: 频道直播源采集
 on:
   workflow_dispatch:
     inputs:
-      max_per_channel:
-        description: '每个频道最多保留多少个去重后的源（默认30）'
+      max_cctv:
+        description: '央视频道每个最多保留多少个源（默认30）'
         required: false
         default: '30'
+        type: string
+      max_weishi:
+        description: '卫视频道每个最多保留多少个源（默认15）'
+        required: false
+        default: '15'
         type: string
       days:
         description: '优先搜索最近几天的更新（默认15）'
@@ -17,7 +22,7 @@ on:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 120   # 搜索较多，给足时间
+    timeout-minutes: 120
 
     steps:
       - name: Checkout
@@ -36,7 +41,8 @@ jobs:
       - name: Run collector
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MAX_PER_CHANNEL: ${{ github.event.inputs.max_per_channel || '30' }}
+          MAX_CCTV: ${{ github.event.inputs.max_cctv || '30' }}
+          MAX_WEISHI: ${{ github.event.inputs.max_weishi || '15' }}
           DAYS: ${{ github.event.inputs.days || '15' }}
         run: |
           python scripts/collect_iptv.py
@@ -45,6 +51,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: iptv-sources-${{ github.run_number }}
-          path: output/*.txt
+          path: scripts/cctv_weishi_ipv4.txt
           if-no-files-found: warn
           retention-days: 30
