@@ -1,4 +1,4 @@
-name: Collect CCTV & Weishi IPTV Sources
+name: 频道直播源采集
 
 on:
   workflow_dispatch:
