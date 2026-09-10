@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       max_cctv:
-        description: '央视频道每个最多保留多少个源（默认30）'
+        description: '央视频道每个逻辑频道最多保留多少个源（默认30）'
         required: false
         default: '30'
         type: string
@@ -51,6 +51,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: iptv-sources-${{ github.run_number }}
-          path: cctv_weishi_ipv4.txt
+          path: |
+            CCTV.txt
+            weishi.txt
           if-no-files-found: warn
           retention-days: 30
