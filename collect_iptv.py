@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-GitHub Code Search 采集央视 + 省级卫视 IPv4 直播源
-- 央视：每个逻辑频道（CCTV-1 和 CCTV1 算同一个）最多 30 个源
-- 卫视：每个频道最多 15 个源
-- 央视采集完毕立即输出 CCTV.txt
-- 卫视采集完毕立即输出 weishi.txt
-- 结果文件放在与脚本同一目录
+高效版：直接从 GitHub Code Search 结果片段中提取直播源
+搜索示例：更新 2026-09 CCTV-6,http
+只提取 snippet 中的 频道名,http://... 行，不再下载完整文件
 """
 
 import os
@@ -26,23 +23,21 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CCTV_FILE = os.path.join(SCRIPT_DIR, "CCTV.txt")
 WEISHI_FILE = os.path.join(SCRIPT_DIR, "weishi.txt")
 
-SLEEP_BETWEEN_SEARCH = 7.5
-SLEEP_BETWEEN_FILE = 1.2
+SLEEP_BETWEEN_SEARCH = 7.0          # 基础休眠
 MAX_PAGES_PER_QUERY = 4
 PER_PAGE = 30
+MAX_RETRIES_ON_429 = 6
 
 HEADERS = {
     "Authorization": f"Bearer {TOKEN}",
-    "Accept": "application/vnd.github.text-match+json",
+    "Accept": "application/vnd.github.text-match+json",  # 关键：获取 text_matches 片段
     "X-GitHub-Api-Version": "2022-11-28",
-    "User-Agent": "IPTV-Collector/1.0"
+    "User-Agent": "IPTV-Collector/2.0"
 }
 
-# 逻辑频道定义：标准名 + 搜索变体
-CCTV_LOGICAL = []
-for i in range(1, 18):
-    CCTV_LOGICAL.append((f"CCTV-{i}", [f"CCTV-{i}", f"CCTV{i}"]))
-CCTV_LOGICAL.append(("CCTV-5+", ["CCTV-5+", "CCTV5+", "CCTV5 +"]))
+# 只搜索带连字符的央视
+CCTV_LOGICAL = [(f"CCTV-{i}", [f"CCTV-{i}"]) for i in range(1, 18)]
+CCTV_LOGICAL.append(("CCTV-5+", ["CCTV-5+"]))
 
 WEISHI_CHANNELS = [
     "北京卫视", "天津卫视", "河北卫视", "山西卫视", "内蒙古卫视",
@@ -55,23 +50,13 @@ WEISHI_CHANNELS = [
     "深圳卫视"
 ]
 
-URL_RE = re.compile(
-    r'https?://(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?/[^\s\'"<>]+|'
-    r'https?://[a-zA-Z0-9][-a-zA-Z0-9.]+\.[a-zA-Z]{2,}(?::\d+)?/[^\s\'"<>]+',
+# 匹配 频道名,http... 的行
+LINE_RE = re.compile(
+    r'([^\n,，]{2,40})[,，]\s*(https?://[^\s\'"<>]+)',
     re.IGNORECASE
 )
 
-EXCLUDE_RE = re.compile(r'::|ipv6|ad\.|ads\.|banner|click|tracking', re.I)
-
-TXT_LINE_RE = re.compile(
-    r'^[\s]*([^\n,，]{2,40})[,，]\s*(https?://[^\s]+)',
-    re.MULTILINE
-)
-
-EXTINF_RE = re.compile(
-    r'#EXTINF[^,]*,\s*(.+?)\s*\n\s*(https?://[^\s]+)',
-    re.IGNORECASE | re.MULTILINE
-)
+EXCLUDE_RE = re.compile(r'::|ipv6|ad\.|ads\.|banner|click|tracking|javascript:', re.I)
 
 
 def get_recent_dates(days: int):
@@ -80,7 +65,8 @@ def get_recent_dates(days: int):
     for i in range(days):
         d = today - timedelta(days=i)
         dates.append(d.strftime("%Y-%m-%d"))
-        dates.append(d.strftime("%Y-%m"))
+        if i < 4:
+            dates.append(d.strftime("%Y-%m"))
     seen = set()
     result = []
     for d in dates:
@@ -93,105 +79,74 @@ def get_recent_dates(days: int):
 def github_search_code(query: str, page: int = 1):
     url = "https://api.github.com/search/code"
     params = {"q": query, "per_page": PER_PAGE, "page": page}
-    try:
-        resp = requests.get(url, headers=HEADERS, params=params, timeout=30)
-        if resp.status_code == 403:
-            print(f"  [RateLimit] 403，等待 60 秒...")
-            time.sleep(60)
-            resp = requests.get(url, headers=HEADERS, params=params, timeout=30)
-        if resp.status_code != 200:
-            print(f"  [Search Error] {resp.status_code}: {resp.text[:200]}")
-            return None
-        return resp.json()
-    except Exception as e:
-        print(f"  [Search Exception] {e}")
-        return None
 
-
-def get_raw_content(item: dict) -> str:
-    repo = item.get("repository", {}).get("full_name", "")
-    path = item.get("path", "")
-    if repo and path:
-        for branch in ["master", "main"]:
-            try:
-                r = requests.get(
-                    f"https://raw.githubusercontent.com/{repo}/{branch}/{path}",
-                    headers={"User-Agent": HEADERS["User-Agent"]},
-                    timeout=15
-                )
-                if r.status_code == 200 and len(r.text) > 50:
-                    return r.text
-            except:
-                pass
-
-    contents_url = item.get("url")
-    if contents_url:
+    for attempt in range(1, MAX_RETRIES_ON_429 + 1):
         try:
-            r = requests.get(contents_url, headers=HEADERS, timeout=15)
-            if r.status_code == 200:
-                data = r.json()
-                if data.get("encoding") == "base64" and data.get("content"):
-                    import base64
-                    return base64.b64decode(data["content"]).decode("utf-8", errors="ignore")
-        except:
-            pass
-    return ""
+            resp = requests.get(url, headers=HEADERS, params=params, timeout=25)
+
+            if resp.status_code == 200:
+                return resp.json()
+
+            if resp.status_code == 429:
+                wait_seconds = 65
+                try:
+                    msg = resp.json().get("message", "")
+                    m = re.search(r'try again in ([\d.]+)s', msg)
+                    if m:
+                        wait_seconds = float(m.group(1)) + 3
+                except:
+                    pass
+                print(f"  [429] 第{attempt}次，等待 {wait_seconds:.1f}s 后重试...")
+                time.sleep(wait_seconds)
+                continue
+
+            print(f"  [Search Error] {resp.status_code}: {resp.text[:150]}")
+            return None
+
+        except Exception as e:
+            print(f"  [Exception] {e}")
+            time.sleep(8)
+            continue
+
+    print("  [Failed] 多次429后跳过")
+    return None
 
 
-def extract_sources(content: str, preferred_name: str) -> list[tuple[str, str]]:
+def extract_from_text_matches(item: dict, preferred: str) -> list[tuple[str, str]]:
+    """直接从搜索返回的 text_matches 片段中提取"""
     results = []
-    if not content:
-        return results
-
-    for m in TXT_LINE_RE.finditer(content):
-        name = m.group(1).strip()
-        url = m.group(2).strip().rstrip(",;")
-        if EXCLUDE_RE.search(url) or not URL_RE.search(url):
-            continue
-        results.append((name, url))
-
-    for m in EXTINF_RE.finditer(content):
-        name = m.group(1).strip()
-        url = m.group(2).strip()
-        if EXCLUDE_RE.search(url) or not URL_RE.search(url):
-            continue
-        results.append((name, url))
-
-    if not results:
-        for m in URL_RE.finditer(content):
-            url = m.group(0).rstrip(",;")
+    text_matches = item.get("text_matches", [])
+    for tm in text_matches:
+        fragment = tm.get("fragment", "") or ""
+        # 在片段中找所有 频道名,http 行
+        for m in LINE_RE.finditer(fragment):
+            name = m.group(1).strip()
+            url = m.group(2).strip().rstrip(",;")
             if EXCLUDE_RE.search(url):
                 continue
-            if any(x in url.lower() for x in [".jpg", ".png", ".css", ".js", "github.com", "raw.githubusercontent"]):
+            if not url.startswith(("http://", "https://")) or len(url) < 15:
                 continue
-            results.append((preferred_name, url))
-
+            # 简单归一
+            if preferred.replace("-", "").lower() in name.replace("-", "").replace(" ", "").lower():
+                name = preferred
+            results.append((name, url))
     return results
 
 
-def normalize_channel_name(name: str, preferred: str) -> str:
-    name = name.strip()
-    key = name.replace(" ", "").replace("-", "").lower()
-    pref_key = preferred.replace(" ", "").replace("-", "").lower()
-    if pref_key in key or key in pref_key:
-        return preferred
-    return name
-
-
 def collect_logical_channel(standard_name: str, variants: list[str], dates: list[str], max_count: int):
-    collected = set()
+    collected = set()          # 只存 url
     name_map = {}
 
+    # 核心：搜索时直接带 ",http"，让 GitHub 帮我们过滤
     queries = []
-    for d in dates:
+    for d in dates[:6]:
         for v in variants:
-            queries.append(f"更新 {d} {v}")
-            queries.append(f"更新{d} {v}")
+            queries.append(f"更新 {d} {v},http")
+            queries.append(f"更新{d} {v},http")
     for v in variants:
-        queries.append(f"更新 {v}")
-        queries.append(f"{v} http")
+        queries.append(f"{v},http")
 
-    print(f"\n===== 开始采集逻辑频道: {standard_name}（变体 {variants}，目标 {max_count} 个） =====")
+    print(f"\n===== 开始采集: {standard_name}（目标 {max_count} 个） =====")
 
     for q in queries:
         if len(collected) >= max_count:
@@ -200,37 +155,34 @@ def collect_logical_channel(standard_name: str, variants: list[str], dates: list
         for page in range(1, MAX_PAGES_PER_QUERY + 1):
             if len(collected) >= max_count:
                 break
+
             data = github_search_code(q, page)
             time.sleep(SLEEP_BETWEEN_SEARCH)
+
             if not data or "items" not in data:
                 break
             items = data["items"]
             if not items:
                 break
-            print(f"    第{page}页 → {len(items)} 个文件")
+            print(f"    第{page}页 → {len(items)} 个结果")
 
             for item in items:
                 if len(collected) >= max_count:
                     break
-                content = get_raw_content(item)
-                time.sleep(SLEEP_BETWEEN_FILE)
-                sources = extract_sources(content, standard_name)
+                sources = extract_from_text_matches(item, standard_name)
                 for name, url in sources:
                     if url in collected:
                         continue
-                    if not url.startswith(("http://", "https://")) or len(url) < 15:
-                        continue
-                    norm_name = normalize_channel_name(name, standard_name)
                     collected.add(url)
-                    name_map[url] = norm_name
+                    name_map[url] = name
                     if len(collected) >= max_count:
-                        print(f"    已达 {max_count} 个，停止本逻辑频道")
+                        print(f"    已达 {max_count} 个，停止")
                         break
 
             if len(items) < PER_PAGE // 2:
                 break
 
-    print(f"  完成 {standard_name}: 共 {len(collected)} 个源")
+    print(f"  完成 {standard_name}: {len(collected)} 个源")
     return collected, name_map
 
 
@@ -239,7 +191,7 @@ def write_file(filepath: str, lines: list[str]):
         f.write("\n".join(lines))
         if lines:
             f.write("\n")
-    print(f"  → 已写入文件: {filepath} （共 {len(lines)} 条）")
+    print(f"  → 已写入: {filepath} （{len(lines)} 条）")
 
 
 def main():
@@ -248,48 +200,41 @@ def main():
         return
 
     dates = get_recent_dates(DAYS)
-    print(f"优先日期范围（最近 {DAYS} 天）: {dates[:5]} ...")
-    print(f"央视逻辑频道上限: {MAX_CCTV} | 卫视上限: {MAX_WEISHI}")
+    print(f"优先日期: {dates[:4]} ...")
+    print(f"央视上限: {MAX_CCTV} | 卫视上限: {MAX_WEISHI}")
 
-    # ========== 1. 采集央视 ==========
+    # 1. 央视
     cctv_results = []
-    seen_urls = set()
-
+    seen = set()
     for standard_name, variants in CCTV_LOGICAL:
         urls, name_map = collect_logical_channel(standard_name, variants, dates, MAX_CCTV)
         for url in sorted(urls):
-            if url in seen_urls:
+            if url in seen:
                 continue
-            seen_urls.add(url)
-            name = name_map.get(url, standard_name)
-            cctv_results.append(f"{name},{url}")
+            seen.add(url)
+            cctv_results.append(f"{name_map.get(url, standard_name)},{url}")
 
-    # 央视采集完毕，立即输出
     cctv_results.sort(key=lambda x: x.split(",", 1)[0])
     write_file(CCTV_FILE, cctv_results)
-    print(f"\n【央视采集完成】共 {len(cctv_results)} 条，已保存到 CCTV.txt\n")
+    print(f"\n【央视完成】{len(cctv_results)} 条 → CCTV.txt\n")
 
-    # ========== 2. 采集卫视 ==========
+    # 2. 卫视
     weishi_results = []
-
     for ch in WEISHI_CHANNELS:
         urls, name_map = collect_logical_channel(ch, [ch], dates, MAX_WEISHI)
         for url in sorted(urls):
-            if url in seen_urls:
+            if url in seen:
                 continue
-            seen_urls.add(url)
-            name = name_map.get(url, ch)
-            weishi_results.append(f"{name},{url}")
+            seen.add(url)
+            weishi_results.append(f"{name_map.get(url, ch)},{url}")
 
-    # 卫视采集完毕，立即输出
     weishi_results.sort(key=lambda x: x.split(",", 1)[0])
     write_file(WEISHI_FILE, weishi_results)
-    print(f"\n【卫视采集完成】共 {len(weishi_results)} 条，已保存到 weishi.txt\n")
+    print(f"\n【卫视完成】{len(weishi_results)} 条 → weishi.txt\n")
 
     print("========== 全部完成 ==========")
-    print(f"CCTV.txt  : {len(cctv_results)} 条")
-    print(f"weishi.txt: {len(weishi_results)} 条")
-    print(f"总计      : {len(cctv_results) + len(weishi_results)} 条")
+    print(f"CCTV.txt  : {len(cctv_results)}")
+    print(f"weishi.txt: {len(weishi_results)}")
 
 
 if __name__ == "__main__":
