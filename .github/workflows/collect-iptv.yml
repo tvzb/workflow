@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       max_cctv:
-        description: '央视频道每个逻辑频道最多保留多少个源（默认30）'
+        description: '央视频道每个逻辑频道最多保留多少个源（默认20）'
         required: false
-        default: '30'
+        default: '20'
         type: string
       max_weishi:
         description: '卫视频道每个最多保留多少个源（默认15）'
