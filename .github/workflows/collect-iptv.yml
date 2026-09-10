@@ -1,4 +1,4 @@
-name: 频道直播源采集
+name: Collect CCTV & Weishi IPTV Sources
 
 on:
   workflow_dispatch:
@@ -45,12 +45,12 @@ jobs:
           MAX_WEISHI: ${{ github.event.inputs.max_weishi || '15' }}
           DAYS: ${{ github.event.inputs.days || '15' }}
         run: |
-          python scripts/collect_iptv.py
+          python collect_iptv.py
 
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
           name: iptv-sources-${{ github.run_number }}
-          path: scripts/cctv_weishi_ipv4.txt
+          path: cctv_weishi_ipv4.txt
           if-no-files-found: warn
           retention-days: 30
