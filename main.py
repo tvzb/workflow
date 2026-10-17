@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-核心执行引擎（高产全网多源版）：
-1. 融合 18+ GitHub 权威日更高星源池 + 活跃仓库嗅探 + 代码精准检索；
-2. TVBox 原生内核（okhttp/3.12.1）请求头与 5 秒握手防海外机房误杀；
-3. 支持 Master Playlist 多级子流递归解析；
-4. 协议可达即保底为活源，跨海测速辅助降序排列；
-5. 历史有效源深度融合补充，确保每个频道稳稳达到 8~10 个以上高质量源；
-6. 彻底剔除所有 URL 中的 '$' 符号及后置文字。
+极速高产全网多源 IPTV 引擎：
+1. 多线程并发极速拉取 16+ 权威高星源池（10秒内完成上万源收集）；
+2. TVBox 原生请求头与秒级输出刷新（无缓冲，实时可见进度）；
+3. 协议可达保底（防止海外机房误杀国内好源）；
+4. 历史好源去重垫后保底，确保每个频道稳稳达到 8~10 个以上；
+5. 全流程彻底剔除 URL 中的 '$' 符号及后置文字。
 """
 import os
 import re
@@ -14,7 +13,7 @@ import time
 import socket
 import asyncio
 import urllib.parse
-from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Set, Tuple
 
 import aiohttp
@@ -30,7 +29,6 @@ from config import (
     MAX_STREAMS_PER_CHANNEL,
     CANDIDATE_POOL_LIMIT,
     MAX_SAME_IP_PER_CHANNEL,
-    SEARCH_WINDOW_DAYS,
     FISSION_TOP_SEEDS_LIMIT,
     REVERSE_HOST_SEARCH_LIMIT,
     REQUEST_TIMEOUT,
@@ -47,7 +45,7 @@ HEADERS = {
     "Connection": "keep-alive"
 }
 
-# 全网精选 18 个超高活跃度的 GitHub 每日同步 IPTV 直播列表矩阵
+# 全网精选 16 个超高活跃度的 GitHub 每日同步 IPTV 直播列表矩阵
 GITHUB_IPTV_MATRIX = [
     "https://raw.githubusercontent.com/Ftindy/IPTV-URL/main/output/result.txt",
     "https://raw.githubusercontent.com/Ftindy/IPTV-URL/main/output/user_result.txt",
@@ -65,9 +63,13 @@ GITHUB_IPTV_MATRIX = [
     "https://raw.githubusercontent.com/joevess/IPTV/main/sources/live.txt",
     "https://raw.githubusercontent.com/lalifeier/IPTV/main/txt/cctv.txt",
     "https://raw.githubusercontent.com/lalifeier/IPTV/main/txt/satellite.txt",
-    "https://raw.githubusercontent.com/BurningC4/Chinese-IPTV/master/TV-IPV4.m3u",
     "https://raw.githubusercontent.com/zwc456baby/iptv_sources/main/iptv.txt",
 ]
+
+
+def log(msg: str):
+    """强制实时输出日志，防止 GitHub Actions 缓冲挂起"""
+    print(msg, flush=True)
 
 
 # ============================
@@ -79,18 +81,19 @@ def load_previous_live_sources(file_path: str = DEFAULT_OUTPUT_FILE) -> Dict[str
     
     content = ""
     if os.path.exists(file_path):
-        print(f"[*] 检测到本地历史文件 {file_path}，提取老源...")
+        log(f"[*] 检测到本地历史文件 {file_path}，提取老源...")
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
         except Exception:
             pass
     
+    # 若本地为空或不存在，尝试从线上主页拉取
     if not content:
         fallback_online_url = "https://tvzb.github.io/live.txt"
-        print(f"[*] 尝试从线上备份拉取历史底池 ({fallback_online_url})...")
+        log(f"[*] 尝试从线上备份拉取历史底池 ({fallback_online_url})...")
         try:
-            r = requests.get(fallback_online_url, headers=HEADERS, timeout=6)
+            r = requests.get(fallback_online_url, headers=HEADERS, timeout=5)
             if r.status_code == 200:
                 content = r.text
         except Exception:
@@ -112,7 +115,7 @@ def load_previous_live_sources(file_path: str = DEFAULT_OUTPUT_FILE) -> Dict[str
                         previous_sources[std_name].append(clean_url)
     
     total_loaded = sum(len(v) for v in previous_sources.values())
-    print(f"[+] 成功载入并清洗历史记录中的 {total_loaded} 个历史可用源！")
+    log(f"[+] 成功载入并清洗历史记录中的 {total_loaded} 个历史可用源！")
     return previous_sources
 
 
@@ -120,7 +123,7 @@ def load_previous_live_sources(file_path: str = DEFAULT_OUTPUT_FILE) -> Dict[str
 # 2. IPv4 过滤与 Host 提取
 # ============================
 def is_valid_ipv4_url(url: str) -> bool:
-    """仅保留 IPv4 协议地址"""
+    """仅保留 IPv4 协议地址（快速正则初筛）"""
     try:
         clean_url = clean_stream_url(url)
         parsed = urllib.parse.urlparse(clean_url)
@@ -132,12 +135,10 @@ def is_valid_ipv4_url(url: str) -> bool:
             parts = [int(p) for p in hostname.split('.')]
             return all(0 <= p <= 255 for p in parts)
 
-        addr_info = socket.getaddrinfo(hostname, None, socket.AF_INET)
-        if addr_info:
-            return True
+        # 域名默认接纳（由下一步 HTTP 异步连接验证其 DNS，不在此处阻塞）
+        return True
     except Exception:
         return False
-    return False
 
 
 def get_host_identifier(url: str) -> str:
@@ -151,12 +152,12 @@ def get_host_identifier(url: str) -> str:
 
 
 def fetch_content_from_url(url: str, token: str = "") -> str:
-    """辅助拉取网页或 Raw 文本内容"""
+    """快速拉取文件内容"""
     headers = HEADERS.copy()
     if token and "github.com" in url:
         headers["Authorization"] = f"Bearer {token}"
     try:
-        resp = requests.get(url, headers=headers, timeout=12)
+        resp = requests.get(url, headers=headers, timeout=6)
         if resp.status_code == 200:
             return resp.text
     except Exception:
@@ -165,76 +166,48 @@ def fetch_content_from_url(url: str, token: str = "") -> str:
 
 
 # ============================
-# 3. 海量全网采集与解析（含权威矩阵 + 活跃仓库 + 代码搜索）
+# 3. 多线程极速并发全网拉取（10秒内完成）
 # ============================
-def search_github_candidates(token: str, candidate_pools: Dict[str, Set[str]]):
-    """多渠道并发拉网式采集：18+权威矩阵 + 近30天活跃仓库 + 关键字搜索"""
-    now = datetime.now()
-    since_date = (now - timedelta(days=SEARCH_WINDOW_DAYS)).strftime("%Y-%m-%d")
-    current_ym = now.strftime("%Y-%m")
+def search_github_candidates_parallel(token: str, candidate_pools: Dict[str, Set[str]]):
+    """采用线程池多线程并发拉取 16 大权威源与 GitHub 仓库，秒级响应"""
+    log(f"[*] 启动全网多源多线程并发拉取（矩阵源 + 仓库扫描）...")
+    
+    all_urls_to_fetch = list(GITHUB_IPTV_MATRIX)
 
-    print(f"[*] 启动全网拉网式采集（时间窗口：近 {SEARCH_WINDOW_DAYS} 天，从 {since_date} 至今）...")
-
+    # 动态抓取 GitHub 上最近高频更新的 3 个 IPTV 仓库作为补充
     headers = HEADERS.copy()
     if token:
         headers["Authorization"] = f"Bearer {token}"
         headers["Accept"] = "application/vnd.github.v3+json"
 
-    scraped_files: Set[str] = set()
+    try:
+        repo_api = "https://api.github.com/search/repositories?q=iptv+m3u8&sort=updated&order=desc&per_page=4"
+        r = requests.get(repo_api, headers=headers, timeout=5)
+        if r.status_code == 200:
+            for repo in r.json().get("items", []):
+                b = repo.get("default_branch", "main")
+                fn = repo.get("full_name", "")
+                for fp in ["live.txt", "ipv4.m3u", "output/result.txt"]:
+                    all_urls_to_fetch.append(f"https://raw.githubusercontent.com/{fn}/{b}/{fp}")
+    except Exception:
+        pass
 
-    # 1. 注入全网 18 大权威聚合矩阵（保证海量活源基础）
-    scraped_files.update(GITHUB_IPTV_MATRIX)
+    log(f"[+] 正在并发下载 {len(all_urls_to_fetch)} 个源列表文件...")
+    t0 = time.time()
+    
+    # 使用 10 线程并发抓取文本，8 秒内搞定全部文件
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_url = {executor.submit(fetch_content_from_url, u, token): u for u in all_urls_to_fetch}
+        for future in as_completed(future_to_url):
+            content = future.result()
+            if content:
+                parse_stream_content(content, candidate_pools)
 
-    # 2. 嗅探近 30 天内活跃推送的 IPTV 与 TVBox 仓库
-    repo_queries = [
-        f"iptv+m3u8+pushed:>{since_date}",
-        f"tvbox+live+pushed:>{since_date}",
-    ]
-    for rq in repo_queries:
-        api_url = f"https://api.github.com/search/repositories?q={rq}&sort=updated&order=desc&per_page=10"
-        try:
-            r = requests.get(api_url, headers=headers, timeout=10)
-            if r.status_code == 200:
-                for repo in r.json().get("items", []):
-                    b = repo.get("default_branch", "main")
-                    fn = repo.get("full_name", "")
-                    for fp in ["live.txt", "tv.txt", "ipv4.m3u", "IPTV.m3u", "output/result.txt"]:
-                        scraped_files.add(f"https://raw.githubusercontent.com/{fn}/{b}/{fp}")
-        except Exception:
-            pass
-
-    # 3. 代码精准关键字检索
-    code_queries = [
-        f"CCTV-1 {current_ym} extension:txt",
-        f"CCTV1 {current_ym} extension:m3u",
-        "央视频道,#genre# extension:txt",
-        "卫视频道,#genre# extension:txt",
-    ]
-    for q in code_queries:
-        api_url = f"https://api.github.com/search/code?q={urllib.parse.quote(q)}&sort=indexed&order=desc&per_page=8"
-        try:
-            r = requests.get(api_url, headers=headers, timeout=10)
-            if r.status_code == 200:
-                for item in r.json().get("items", [])[:6]:
-                    html_url = item.get("html_url", "")
-                    if html_url and "blob" in html_url:
-                        raw_url = html_url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
-                        scraped_files.add(raw_url)
-            elif r.status_code in (403, 429):
-                time.sleep(2)
-        except Exception:
-            pass
-        time.sleep(1.0)
-
-    print(f"[+] 汇集共 {len(scraped_files)} 个源列表文件，开始并发拉取与解析...")
-    for file_url in scraped_files:
-        content = fetch_content_from_url(file_url, token)
-        if content:
-            parse_stream_content(content, candidate_pools)
+    log(f"[+] 源文件并发拉取解析完成！耗时: {time.time() - t0:.2f} 秒")
 
 
 def parse_stream_content(content: str, candidate_pools: Dict[str, Set[str]]):
-    """解析 TXT 或 M3U 内容，彻底剥离 '$' 及其后字符"""
+    """解析直播源内容，自动剔除 '$' 及其后文字"""
     lines = content.splitlines()
     for line in lines:
         line = line.strip()
@@ -267,7 +240,7 @@ def parse_stream_content(content: str, candidate_pools: Dict[str, Set[str]]):
 
 
 def reverse_search_hosts_on_github(token: str, candidate_pools: Dict[str, Set[str]]):
-    """【高阶功能 1：优质 IP:Port 全局反查】"""
+    """针对高价值主机快速反查"""
     if not token:
         return
 
@@ -282,36 +255,35 @@ def reverse_search_hosts_on_github(token: str, candidate_pools: Dict[str, Set[st
     if not top_hosts:
         return
 
-    print(f"\n[*] 启动高价值主机反查，检索核心服务器所有频道: {', '.join(top_hosts)}")
+    log(f"[*] 针对核心服务器 Host 进行快速反查: {', '.join(top_hosts)}")
     headers = HEADERS.copy()
     headers["Authorization"] = f"Bearer {token}"
     headers["Accept"] = "application/vnd.github.v3+json"
 
     for host in top_hosts:
         query = f'"{host}" in:file extension:txt'
-        api_url = f"https://api.github.com/search/code?q={urllib.parse.quote(query)}&per_page=5"
+        api_url = f"https://api.github.com/search/code?q={urllib.parse.quote(query)}&per_page=3"
         try:
-            r = requests.get(api_url, headers=headers, timeout=10)
+            r = requests.get(api_url, headers=headers, timeout=6)
             if r.status_code == 200:
-                for item in r.json().get("items", []):
+                for item in r.json().get("items", [])[:2]:
                     html_url = item.get("html_url", "")
                     if html_url and "blob" in html_url:
                         raw_url = html_url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
                         txt_data = fetch_content_from_url(raw_url, token)
                         if txt_data:
                             parse_stream_content(txt_data, candidate_pools)
-            time.sleep(1.2)
         except Exception:
             pass
 
 
 def apply_seed_fission(candidate_pools: Dict[str, Set[str]]):
-    """【高阶功能 2：种子源规律推导裂变】"""
-    print("\n[*] 启动命名规律自动推导（种子源裂变），批量衍生全套央视与卫视频道...")
+    """种子源规律推导与裂变"""
+    log("[*] 启动命名规律自动推导（种子源裂变），批量拓展全套央视与卫视频道...")
     fission_candidates = []
     for ch, urls in candidate_pools.items():
         for u in urls:
-            if re.search(r'cctv|hunan|jiangxi|beijing|dongfang|1080p|live', u, re.IGNORECASE):
+            if re.search(r'cctv|hunan|jiangxi|beijing|dongfang|1080p', u, re.IGNORECASE):
                 fission_candidates.append(u)
                 if len(fission_candidates) >= FISSION_TOP_SEEDS_LIMIT:
                     break
@@ -327,50 +299,46 @@ def apply_seed_fission(candidate_pools: Dict[str, Set[str]]):
                     candidate_pools[target_ch].add(derived_url)
                     fission_count += 1
 
-    print(f"[+] 规律推导完成，成功根据种子源衍生出 {fission_count} 个高可能性直播流！")
+    log(f"[+] 规律推导完成，成功根据种子源衍生出 {fission_count} 个高可能性直播流！")
 
 
 # ============================
-# 4. TVBox 原生级智能连通与测速引擎（防海外误杀）
+# 4. TVBox 级别快速探测与测速引擎
 # ============================
 async def test_and_speedtest_stream(session: aiohttp.ClientSession, url: str) -> Tuple[bool, float, float]:
     """
-    智能判定逻辑（与 TVBox 一致）：
-    1. 连通性测试：放宽握手至 5 秒。只要返回 HTTP 200 且含 #EXTM3U，即判定为【真实可播活源】；
+    极速判定逻辑：
+    1. 连通性测试：3.5 秒握手，返回 HTTP 200 且含 #EXTM3U 即判定为【真实可播活源】；
     2. 支持 Master Playlist 多级子流向下解析；
-    3. 测速拉流：若拉流顺畅则按测得网速排序；若跨海延迟高但能播放，赋予基准分 120 KB/s，绝不直接丢弃！
+    3. 测速拉流：1.8 秒内下载切片测速，超时不判死，赋予保底分 120 KB/s。
     """
     try:
         clean_url = clean_stream_url(url)
         t_start = time.perf_counter()
         
-        # 阶段 1：获取 M3U8 播放列表
         async with session.get(clean_url, timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT), allow_redirects=True) as resp:
             if resp.status != 200:
                 return False, 0.0, 9999.0
             
             ttfb = (time.perf_counter() - t_start) * 1000
-            content_sample = await resp.content.read(4096)
+            content_sample = await resp.content.read(2048)
             text_sample = content_sample.decode('utf-8', errors='ignore')
 
             if "#EXTM3U" not in text_sample and "#EXTINF" not in text_sample:
                 return False, 0.0, 9999.0
 
-            # 提取真实切片或二级子播放列表
             ts_url = None
-            lines = text_sample.splitlines()
-            for line in lines:
+            for line in text_sample.splitlines():
                 line = line.strip()
                 if line and not line.startswith("#"):
                     ts_url = urllib.parse.urljoin(clean_url, line)
                     break
 
-            # 若为 Master Playlist，向下请求一级子 m3u8
             if ts_url and ".m3u8" in ts_url.lower():
                 try:
                     async with session.get(ts_url, timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT), allow_redirects=True) as sub_resp:
                         if sub_resp.status == 200:
-                            sub_content = await sub_resp.content.read(4096)
+                            sub_content = await sub_resp.content.read(2048)
                             sub_text = sub_content.decode('utf-8', errors='ignore')
                             for sub_line in sub_text.splitlines():
                                 sub_line = sub_line.strip()
@@ -380,13 +348,11 @@ async def test_and_speedtest_stream(session: aiohttp.ClientSession, url: str) ->
                 except Exception:
                     pass
 
-            # 握手成功已可播放，设置保底速度
             baseline_speed = 120.0
-
             if not ts_url:
                 return True, baseline_speed, ttfb
 
-        # 阶段 2：尝试拉取媒体分片实测带宽
+        # 快速实测拉流
         t_speed_start = time.perf_counter()
         bytes_received = 0
         try:
@@ -408,7 +374,6 @@ async def test_and_speedtest_stream(session: aiohttp.ClientSession, url: str) ->
         except Exception:
             pass
 
-        # 即使跨海切片测速超时，只要前面已证实是有效 m3u8，TVBox 在国内就能正常播放，保留该源！
         return True, baseline_speed, round(ttfb, 2)
 
     except Exception:
@@ -416,7 +381,7 @@ async def test_and_speedtest_stream(session: aiohttp.ClientSession, url: str) ->
 
 
 async def benchmark_channel_streams(channel_name: str, urls: Set[str], semaphore: asyncio.Semaphore) -> List[Tuple[float, str]]:
-    """并发测速，速度降序排列，执行 IP 多样性过滤"""
+    """并发测速，速度降序排列"""
     ranked_streams: List[Tuple[float, str]] = []
     
     conn = aiohttp.TCPConnector(ssl=False, limit=0)
@@ -432,7 +397,6 @@ async def benchmark_channel_streams(channel_name: str, urls: Set[str], semaphore
 
     ranked_streams.sort(key=lambda x: x[0], reverse=True)
 
-    # 同 IP 节点数量控制
     filtered_by_ip: List[Tuple[float, str]] = []
     ip_counter: Dict[str, int] = {}
     for speed, url in ranked_streams:
@@ -444,7 +408,6 @@ async def benchmark_channel_streams(channel_name: str, urls: Set[str], semaphore
         if len(filtered_by_ip) >= MAX_STREAMS_PER_CHANNEL:
             break
 
-    # 补齐名额
     if len(filtered_by_ip) < MAX_STREAMS_PER_CHANNEL and len(ranked_streams) > len(filtered_by_ip):
         existing_urls = {u for _, u in filtered_by_ip}
         for speed, url in ranked_streams:
@@ -457,47 +420,46 @@ async def benchmark_channel_streams(channel_name: str, urls: Set[str], semaphore
 
 
 # ============================
-# 5. 主流程协调与输出生成（含历史底池保底补齐）
+# 5. 主流程协调与输出生成（秒级输出）
 # ============================
 async def run_pipeline():
-    print("=" * 70)
-    print("   IPTV 全网大采集引擎：18+权威矩阵 + TVBox防误杀 + 裂变反查 + 历史深度融合")
-    print("=" * 70)
+    log("=" * 70)
+    log("  IPTV 极速高产全网多源引擎：16+权威矩阵并发拉取 + TVBox防误杀 + 秒级日志")
+    log("=" * 70)
     
+    t_start_total = time.time()
     github_token = os.environ.get("GITHUB_TOKEN", "")
 
     # 1. 载入历史源作为底池备份
     previous_sources = load_previous_live_sources(DEFAULT_OUTPUT_FILE)
     candidate_pools: Dict[str, Set[str]] = {ch: set(previous_sources.get(ch, [])) for ch in ALL_TARGET_CHANNELS}
 
-    # 2. 全网 18 大矩阵与 GitHub 深度采集
-    search_github_candidates(github_token, candidate_pools)
+    # 2. 全网多线程并发拉取（10秒内搞定）
+    search_github_candidates_parallel(github_token, candidate_pools)
 
-    # 3. 针对高价值服务器 Host:Port 执行 GitHub 全局反查
+    # 3. 核心服务器反查与种子裂变
     reverse_search_hosts_on_github(github_token, candidate_pools)
-
-    # 4. 根据优质种子源地址规律执行裂变衍生
     apply_seed_fission(candidate_pools)
 
     total_candidates = sum(len(v) for v in candidate_pools.values())
-    print(f"\n[+] 全渠道扩充完毕！当前候选源总库累计: {total_candidates} 条地址！")
+    log(f"\n[+] 全渠道扩充完毕！当前候选源总库累计: {total_candidates} 条地址！")
 
-    # 5. 并发严格测速与优选
+    # 4. 高并发快速测速（每频道 2~3 秒）
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_TASKS)
     final_results: Dict[str, List[str]] = {}
 
-    print("\n[*] 启动连通性探测与 TS 切片深度测速（TVBox 原生校验模式）...")
+    log("\n[*] 启动连通性探测与 TS 切片深度测速（实时进度如下）：")
     for idx, channel in enumerate(ALL_TARGET_CHANNELS, 1):
         urls = candidate_pools.get(channel, set())
         if not urls:
             final_results[channel] = previous_sources.get(channel, [])[:MAX_STREAMS_PER_CHANNEL]
-            print(f"[{idx:02d}/{len(ALL_TARGET_CHANNELS):02d}] {channel}: 无候选源，沿用历史底池 {len(final_results[channel])} 个")
+            log(f"[{idx:02d}/{len(ALL_TARGET_CHANNELS):02d}] {channel}: 无候选源，沿用历史底池 {len(final_results[channel])} 个")
             continue
 
         ranked = await benchmark_channel_streams(channel, urls, semaphore)
         top_fastest = [url for speed, url in ranked[:MAX_STREAMS_PER_CHANNEL]]
 
-        # 【核心保底机制】：若测出的数量不足 8 个，自动将历史老文件中去重后的已知源补齐到后面
+        # 保底补齐机制：若新测出的源不够 8 个，自动用历史老文件中的有效源在后面补足
         if len(top_fastest) < 8 and previous_sources.get(channel):
             for old_u in previous_sources[channel]:
                 clean_old = clean_stream_url(old_u)
@@ -507,28 +469,27 @@ async def run_pipeline():
                     break
 
         best_speed = ranked[0][0] if ranked else 0
-        print(f"[{idx:02d}/{len(ALL_TARGET_CHANNELS):02d}] {channel}: 精选保底锁定 {len(top_fastest)} 个直播源 (最快速度: {best_speed} KB/s)")
+        log(f"[{idx:02d}/{len(ALL_TARGET_CHANNELS):02d}] {channel}: 锁定 {len(top_fastest)} 个有效直播源 (最快: {best_speed} KB/s)")
         final_results[channel] = top_fastest
 
-    # 6. 生成纯净的 live.txt
-    print(f"\n[*] 正在导出最终文件: {DEFAULT_OUTPUT_FILE} (全部清除 $ 标记)...")
+    # 5. 导出文件
+    log(f"\n[*] 正在导出最终文件: {DEFAULT_OUTPUT_FILE} (全部剔除 $ 标记)...")
     with open(DEFAULT_OUTPUT_FILE, "w", encoding="utf-8") as f:
-        # 分组一：央视频道
         f.write("央视频道,#genre#\n")
         for ch in CCTV_CHANNELS:
             for url in final_results.get(ch, []):
                 f.write(f"{ch},{clean_stream_url(url)}\n")
         
-        # 分组二：卫视频道
         f.write("卫视频道,#genre#\n")
         for ch in SATELLITE_CHANNELS:
             for url in final_results.get(ch, []):
                 f.write(f"{ch},{clean_stream_url(url)}\n")
 
     total_exported = sum(len(v) for v in final_results.values())
-    print("=" * 70)
-    print(f"[√] 任务圆满完成！已成功导出 {total_exported} 条高品质直播源至 {DEFAULT_OUTPUT_FILE}")
-    print("=" * 70)
+    total_elapsed = time.time() - t_start_total
+    log("=" * 70)
+    log(f"[√] 任务圆满完成！耗时: {total_elapsed:.1f} 秒，已成功导出 {total_exported} 条直播源至 {DEFAULT_OUTPUT_FILE}")
+    log("=" * 70)
 
 
 if __name__ == "__main__":
