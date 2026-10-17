@@ -230,16 +230,15 @@ def extrapolate_channels_from_seed(seed_url: str) -> List[Tuple[str, str]]:
     return results
 
 
-# 运行控制参数（大幅扩充候选池与放宽超时）
+# 运行控制参数（兼顾海量优质源与超高速执行）
 MAX_STREAMS_PER_CHANNEL = 10      # 最终保留的最快直播源数
-CANDIDATE_POOL_LIMIT = 100        # 单频道候选池上限扩充至 100（保障源充裕）
-MAX_SAME_IP_PER_CHANNEL = 4       # 同 IP 节点上限放宽至 4 个
-SEARCH_WINDOW_DAYS = 30           # 检索时间窗口（30 天）
-FISSION_TOP_SEEDS_LIMIT = 8       # 裂变种子数提升至 8 台服务器
-REVERSE_HOST_SEARCH_LIMIT = 6     # 反查 GitHub 优质主机数提升至 6 个
-REQUEST_TIMEOUT = 5.0             # 握手超时放宽至 5 秒（防跨国高延迟误杀）
-SPEED_TEST_TIMEOUT = 2.5          # 切片下载超时 2.5 秒
-SPEED_TEST_MAX_BYTES = 512 * 1024 # 测速下载 512KB 即可快速计算带宽
-MAX_CONCURRENT_TASKS = 35         # 提高协程并发度加速测试
+CANDIDATE_POOL_LIMIT = 35         # 单频道候选池上限 35（足够筛选出 Top 10，总测试量适中）
+MAX_SAME_IP_PER_CHANNEL = 4       # 同 IP 节点上限 4 个（防单点失效）
+FISSION_TOP_SEEDS_LIMIT = 5       # 裂变种子数 5 台高品质服务器
+REVERSE_HOST_SEARCH_LIMIT = 3     # 反查 GitHub 核心主机数
+REQUEST_TIMEOUT = 3.5             # 握手超时 3.5 秒
+SPEED_TEST_TIMEOUT = 1.8          # 切片下载测速 1.8 秒
+SPEED_TEST_MAX_BYTES = 512 * 1024 # 测速下载 512KB
+MAX_CONCURRENT_TASKS = 45         # 高协程并发（45 并发，几秒测完一个频道）
 DEFAULT_OUTPUT_FILE = "live.txt"  # 唯一输出文件格式
 TVBOX_USER_AGENT = "okhttp/3.12.1" # TVBox 原生内核请求头
