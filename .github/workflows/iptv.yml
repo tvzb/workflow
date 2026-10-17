@@ -1,4 +1,4 @@
-name: 直播源地址采集
+name: IPTV Live Stream Manual Updater
 
 on:
   workflow_dispatch:
@@ -36,8 +36,9 @@ jobs:
       - name: 执行直播源采集、清洗与测速 (Run Pipeline)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYTHONUNBUFFERED: "1"
         run: |
-          python main.py
+          python -u main.py
 
       - name: 提交并推流更新 live.txt (Commit and Push)
         run: |
