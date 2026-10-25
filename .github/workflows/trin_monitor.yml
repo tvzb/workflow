@@ -1,12 +1,13 @@
 name: A股阿姆氏数据
 
 on:
-  # 支持在 GitHub 页面上点击“Run workflow”手动触发
   workflow_dispatch:
-  
-  # 定时自动运行：UTC 时间 07:10（对应北京时间 15:10，A 股收盘后自动计算）
   schedule:
     - cron: '10 7 * * 1-5'
+
+# 显式赋予写权限，防止 push 报 403
+permissions:
+  contents: write
 
 jobs:
   calculate:
@@ -30,11 +31,15 @@ jobs:
         run: |
           python calc_trin.py
 
-      - name: 保存计算结果文件到仓库 (可选)
+      - name: 保存计算结果文件到仓库
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add latest_trin.txt
-          git diff --quiet && git diff --staged --quiet || (git commit -m "自动更新 A股 TRIN 指标 [skip ci]" && git push)
+          if [ -f "latest_trin.txt" ]; then
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add latest_trin.txt
+            git diff --quiet && git diff --staged --quiet || (git commit -m "自动更新 A股 TRIN 指标 [skip ci]" && git push)
+          else
+            echo "警告：未检测到 latest_trin.txt 文件，跳过本次提交"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
