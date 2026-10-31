@@ -1,12 +1,17 @@
-name: VPN节点采集
+name: VPN 节点采集
 
 on:
-  workflow_dispatch:        # 支持手动随时触发
+  workflow_dispatch:        # 支持手动点击随时运行
   push:
     paths:
       - 'vpn.py'
       - 'vpn_sources.txt'
       - '.github/workflows/vpn.yml'
+
+# 防重叠锁：如果新任务触发时旧任务还在跑，自动取消旧任务
+concurrency:
+  group: vpn-collector-group
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -14,44 +19,82 @@ permissions:
 jobs:
   collect_vpn:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUNBUFFERED: "1"
+
     steps:
       - name: 1. 检出仓库代码
         uses: actions/checkout@v4
 
-      - name: 2. 配置 Python 环境与依赖
+      - name: 2. 配置 Python 环境与缓存依赖
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - run: pip install requests pyyaml
 
-      - name: 3. 下载最新 Mihomo (Clash Meta) 内核
+      - name: 3. 缓存 Mihomo 内核与 GeoIP 数据库
+        id: cache-mihomo
+        uses: actions/cache@v4
+        with:
+          path: |
+            mihomo
+            Country.mmdb
+          # 按周生成缓存 Key，每周自动更新一次最新内核与 GeoIP 库
+          key: mihomo-core-${{ runner.os }}-v2
+
+      - name: 4. 下载 Mihomo 内核与 GeoIP (仅在无缓存时执行)
+        if: steps.cache-mihomo.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          LATEST_URL=$(curl -s https://api.github.com/repos/MetaCubeX/mihomo/releases/latest \
+          # 优先通过带 Token 的 API 获取最新版本（彻底避免匿名 API 403 限流）
+          LATEST_URL=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/repos/MetaCubeX/mihomo/releases/latest \
             | grep browser_download_url \
             | grep "mihomo-linux-amd64-compatible" \
             | grep "\.gz\"" \
             | head -n 1 \
             | cut -d '"' -f 4)
+          
+          # 保底链接（万一 API 抽风，直接走固定重定向地址）
+          if [ -z "$LATEST_URL" ]; then
+            LATEST_URL="https://github.com/MetaCubeX/mihomo/releases/latest/download/mihomo-linux-amd64-compatible-v1.18.10.gz"
+          fi
+          
           echo "Downloading Mihomo from: $LATEST_URL"
           wget -q "$LATEST_URL" -O mihomo.gz
           gunzip -f mihomo.gz
           chmod +x mihomo
+          
+          echo "Downloading Country.mmdb..."
+          wget -q https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country.mmdb -O Country.mmdb
 
-      - name: 4. 执行节点采集与模拟国内测速 (vpn.py)
-        run: python vpn.py
+      - name: 5. 确保内核具备可执行权限
+        run: chmod +x mihomo
 
-      - name: 5. 提交并推送生成的 vpn_clash.yaml
+      - name: 6. 执行 V2.0 抗封锁节点采集与多轮测速 (vpn.py)
+        run: python -u vpn.py
+
+      - name: 7. 安全提交并推送 vpn_clash.yaml (支持多工作流防冲突重试)
         run: |
           if [ -f "vpn_clash.yaml" ]; then
             git config --local user.email "actions@github.com"
             git config --local user.name "GitHub Actions"
             git add vpn_clash.yaml
+            
             if ! git diff --staged --quiet; then
               git commit -m "Auto update vpn_clash.yaml [skip ci]"
-              git pull --rebase origin ${{ github.ref_name }}
-              git push
+              
+              # 循环最多3次拉取变基并推送，防止与仓库内其他工作流同时推送产生冲突
+              for i in 1 2 3; do
+                git pull --rebase origin ${{ github.ref_name }} && git push && break
+                echo "推送遇到并发冲突，等待 3 秒后进行第 $((i+1)) 次重试..."
+                sleep 3
+              done
             else
-              echo "节点无变化，跳过提交。"
+              echo "节点列表无变化，跳过提交。"
             fi
           fi
