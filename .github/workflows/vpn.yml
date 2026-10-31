@@ -28,11 +28,10 @@ jobs:
       - name: 1. 检出仓库代码
         uses: actions/checkout@v4
 
-      - name: 2. 配置 Python 环境与缓存依赖
+      - name: 2. 配置 Python 环境与安装依赖
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
       - run: pip install requests pyyaml
 
       - name: 3. 缓存 Mihomo 内核与 GeoIP 数据库
@@ -42,7 +41,6 @@ jobs:
           path: |
             mihomo
             Country.mmdb
-          # 按周生成缓存 Key，每周自动更新一次最新内核与 GeoIP 库
           key: mihomo-core-${{ runner.os }}-v2
 
       - name: 4. 下载 Mihomo 内核与 GeoIP (仅在无缓存时执行)
@@ -50,7 +48,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # 优先通过带 Token 的 API 获取最新版本（彻底避免匿名 API 403 限流）
           LATEST_URL=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
             https://api.github.com/repos/MetaCubeX/mihomo/releases/latest \
             | grep browser_download_url \
@@ -59,7 +56,6 @@ jobs:
             | head -n 1 \
             | cut -d '"' -f 4)
           
-          # 保底链接（万一 API 抽风，直接走固定重定向地址）
           if [ -z "$LATEST_URL" ]; then
             LATEST_URL="https://github.com/MetaCubeX/mihomo/releases/latest/download/mihomo-linux-amd64-compatible-v1.18.10.gz"
           fi
@@ -88,7 +84,6 @@ jobs:
             if ! git diff --staged --quiet; then
               git commit -m "Auto update vpn_clash.yaml [skip ci]"
               
-              # 循环最多3次拉取变基并推送，防止与仓库内其他工作流同时推送产生冲突
               for i in 1 2 3; do
                 git pull --rebase origin ${{ github.ref_name }} && git push && break
                 echo "推送遇到并发冲突，等待 3 秒后进行第 $((i+1)) 次重试..."
