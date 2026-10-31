@@ -6,166 +6,182 @@ log-level: info
 unified-delay: true
 tcp-concurrent: true
 proxies:
-- name: '01_[38.2M|501ms] TROJAN_🇺🇸 trojan-US-... #8'
-  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
+- name: 01_[53.0M|440ms] TROJAN_🇺🇸US-216.152.155.158-2452
+  server: 216.152.155.158
   port: 443
-  server: 66.163.122.7
-  skip-cert-verify: true
-  sni: www.searchnationwidecareerchangehelperandguidancetoday.com
   type: trojan
-  udp: true
-- name: '02_[14.9M|477ms] TROJAN_🇺🇸 trojan-US-... #9'
   password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
-  port: 443
+  sni: resources.nextjobopportunityandclaimyouridealrole.com
+  skip-cert-verify: true
+  udp: true
+- name: 02_[41.3M|441ms] TROJAN_🇺🇸US-216.152.155.176-0075
   server: 216.152.155.176
+  port: 443
+  type: trojan
+  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
   sni: blog.nextjobopportunityandclaimyouridealrole.com
-  type: trojan
   skip-cert-verify: true
   udp: true
-- name: 03_[14.6M|480ms] TROJAN_🇺🇸US-216.152.155.23-0077
-  server: 216.152.155.23
+- client-fingerprint: chrome
+  name: '03_[40.6M|453ms] VLESS_🇺🇸 vless-US-1... #6'
+  network: tcp
+  port: 18580
+  server: us007.zestapp778.com
+  servername: us007.zestapp778.com
+  tls: true
+  type: vless
+  uuid: e9a8144e-5237-488a-afb1-9ca3d8d54c80
+  skip-cert-verify: true
+  udp: true
+- name: 04_[11.2M|470ms] TROJAN_🇺🇸US-66.163.114.166-0143
+  server: 66.163.114.166
   port: 443
   type: trojan
   password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
-  sni: courses.nextjobopportunityandclaimyouridealrole.com
+  sni: blog.findconnectwithemployersandbuildprofessionalnetwork.com
   skip-cert-verify: true
   udp: true
-- name: '04_[10.7M|573ms] TROJAN_🇺🇸 trojan-US-... #11'
-  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
+- name: 05_[15.4M|1227ms] TROJAN_🇺🇸US-66.163.122.25-0507
+  server: 66.163.122.25
   port: 443
+  type: trojan
+  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
+  sni: cdn.searchnationwidecareerchangehelperandguidancetoday.com
+  skip-cert-verify: true
+  udp: true
+- name: 06_[11.1M|533ms] TROJAN_🇺🇸US-66.23.203.21-5372
+  server: 66.23.203.21
+  port: 59689
+  type: trojan
+  password: ae7eb4dwyaz25pxwgq59
+  sni: 66.23.203.21
+  skip-cert-verify: true
+  udp: true
+- name: 07_[9.5M|548ms] TROJAN_🇺🇸US-216.152.156.65-0117
+  server: 216.152.156.65
+  port: 443
+  type: trojan
+  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
+  sni: learn.healthcarejobshubenhancemedicalprofessionalskillstoday.com
+  skip-cert-verify: true
+  udp: true
+- name: 08_[9.5M|547ms] TROJAN_🇺🇸US-216.152.156.81-0078
+  server: 216.152.156.81
+  port: 443
+  type: trojan
+  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
+  sni: www.healthcarejobshubenhancemedicalprofessionalskillstoday.com
+  skip-cert-verify: true
+  udp: true
+- name: 09_[8.9M|602ms] TROJAN_🇺🇸US-169.197.140.214-0497
   server: 169.197.140.214
-  type: trojan
-  skip-cert-verify: true
-  udp: true
-- name: '05_[10.2M|576ms] TROJAN_🇺🇸 trojan-US-... #1'
-  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
-  port: 443
-  server: 169.197.140.169
-  type: trojan
-  skip-cert-verify: true
-  udp: true
-- auth: H7mP2xY9kJ4nQ8wR5tF6vB3z
-  name: '06_[10.1M|601ms] HYSTERIA2_🇺🇸 美国  USA #7'
-  password: H7mP2xY9kJ4nQ8wR5tF6vB3z
-  port: 443
-  server: vpn-us-004.fastervpn.world
-  skip-cert-verify: true
-  sni: vpn-us-004.fastervpn.world
-  tls: false
-  type: hysteria2
-  udp: true
-- name: '07_[9.4M|525ms] TROJAN_🇺🇸 trojan-US-... #9'
-  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
-  port: 443
-  server: 216.152.156.42
-  type: trojan
-  skip-cert-verify: true
-  udp: true
-- name: '08_[9.5M|570ms] TROJAN_🇺🇸 trojan-US-... #10'
-  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
-  port: 443
-  server: 216.152.156.212
-  sni: courses.healthcarejobshubenhancemedicalprofessionalskillstoday.com
-  type: trojan
-  skip-cert-verify: true
-  udp: true
-- name: 09_[7.8M|531ms] TROJAN_🇺🇸US-66.163.114.114-0145
-  server: 66.163.114.114
   port: 443
   type: trojan
   password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
-  sni: learn.findconnectwithemployersandbuildprofessionalnetwork.com
   skip-cert-verify: true
   udp: true
-- name: '10_[5.7M|510ms] TROJAN_🇺🇸 trojan-US-... #4'
-  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
+- name: 10_[9.1M|862ms] TROJAN_🇺🇸US-66.163.122.7-0134
+  server: 66.163.122.7
   port: 443
-  server: 66.163.112.121
-  sni: www.unlockyourfuturefindyourperfectcareer.com
   type: trojan
+  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
+  sni: www.searchnationwidecareerchangehelperandguidancetoday.com
   skip-cert-verify: true
   udp: true
-- name: '11_[5.8M|530ms] TROJAN_🇺🇸 trojan-US-... #4'
+- name: 11_[5.8M|510ms] TROJAN_🇺🇸US-66.163.112.242-0503
+  server: 66.163.112.242
+  port: 443
+  type: trojan
+  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
+  skip-cert-verify: true
+  udp: true
+- name: '12_[5.8M|516ms] TROJAN_🇺🇸 trojan-US-... #10'
   password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
   port: 443
   server: 66.163.112.13
-  skip-cert-verify: true
-  sni: blog.unlockyourfuturefindyourperfectcareer.com
   type: trojan
+  skip-cert-verify: true
   udp: true
-- name: 12_[5.1M|529ms] TROJAN_🇺🇸US-216.106.186.32-0080
-  server: blog.findlocaljobnetworkandbuildcommunityconnections.com
+- name: 13_[3.2M|346ms] TROJAN_🏁RELAY-104.18.8.83-0901
+  server: 104.18.8.83
   port: 443
   type: trojan
-  password: dba20dcb635e430fa4d3bfc303a149d2
-  sni: blog.findlocaljobnetworkandbuildcommunityconnections.com
+  password: humanity
+  sni: www.calmlunch.com
   skip-cert-verify: true
+  network: ws
+  ws-opts:
+    path: /assignment
+    headers:
+      Host: www.calmlunch.com
   udp: true
-- name: '13_[3.8M|306ms] TROJAN_🇫🇷 trojan-FR-... #3'
+- name: '14_[3.1M|362ms] TROJAN_🇫🇷 trojan-FR-... #5'
   network: ws
   password: humanity
   port: 443
-  server: www.calmlunch.com
-  sni: www.calmlunch.com
-  type: trojan
-  ws-opts:
-    headers:
-      Host: www.calmlunch.com
-    path: /assignment
-  skip-cert-verify: true
-  udp: true
-- name: 14_[3.7M|304ms] TROJAN_🏁RELAY-45.130.125.160-0475
   server: 45.130.125.160
-  port: 443
-  type: trojan
-  password: humanity
-  sni: www.calmlunch.com
   skip-cert-verify: true
-  network: ws
+  sni: www.calmlunch.com
+  type: trojan
   ws-opts:
+    headers:
+      Host: www.calmlunch.com
     path: '%2Fassignment'
-    headers:
-      Host: www.calmlunch.com
   udp: true
-- name: '15_[3.6M|319ms] VLESS_🇫🇷 vless-FR-1... #3'
-  network: ws
-  port: 14430
-  server: 138.124.70.41
-  tls: false
-  type: vless
-  uuid: 6cc745e3-4eb9-46c8-a4a1-85dee7b87edc
-  ws-opts:
-    headers:
-      Host: 138.124.70.41
-    path: /vless
-  skip-cert-verify: true
-  udp: true
-- name: '16_[3.2M|425ms] TROJAN_🇫🇷 trojan-FR-... #3'
-  network: ws
-  password: humanity
+- name: 15_[3.0M|366ms] TROJAN_🏁RELAY-104.18.8.83-0473
+  server: www.calmlunch.com
   port: 443
-  server: 45.87.41.18
-  skip-cert-verify: true
-  sni: www.calmlunch.com
   type: trojan
+  password: humanity
+  sni: www.calmlunch.com
+  skip-cert-verify: true
+  network: ws
   ws-opts:
+    path: /assignment
     headers:
       Host: www.calmlunch.com
-    path: /assignment
   udp: true
-- name: '17_[3.2M|258ms] HYSTERIA2_Telegram@vpnjey #6'
-  obfs: salamander
-  obfs-password: Telegram@vpnjey
-  password: VPNJEY
-  port: 36264
-  server: 179.61.138.145
+- name: 16_[2.9M|381ms] TROJAN_🇪🇸ES-66.163.118.166-0193
+  server: 66.163.118.166
+  port: 443
+  type: trojan
+  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
+  sni: learn.discovergreatjobsandadvanceyourcareer.com
   skip-cert-verify: true
-  sni: de2.jey.cc.cd
-  tls: false
-  type: hysteria2
   udp: true
-- name: 18_[2.8M|483ms] TROJAN_🇩🇪DE-161.35.192.122-0486
-  server: 161.35.192.122
+- name: 17_[2.6M|426ms] VLESS_🇸🇪 瑞典  SWE 2
+  server: se-2.pythonsetupbib.online
+  port: 61374
+  type: vless
+  uuid: f8d52ece-fad4-478d-875d-df6eed3befa7
+  tls: true
+  reality-opts:
+    public-key: QrNs0ew7snHqLfpVXS9RAhlRzgAzzGZK9fXmDcx9xHI
+  servername: se-2.pythonsetupbib.online
+  client-fingerprint: chrome
+  network: xhttp
+  xhttp-opts:
+    path: /
+    host: se-2.pythonsetupbib.online
+    mode: packet-up
+    x-padding-bytes: 100-500
+  udp: true
+  skip-cert-verify: true
+- name: 18_[2.7M|499ms] TROJAN_🇳🇱NL-45.87.41.18-0472
+  server: 45.87.41.18
+  port: 443
+  type: trojan
+  password: humanity
+  sni: www.calmlunch.com
+  skip-cert-verify: true
+  network: ws
+  ws-opts:
+    path: /assignment
+    headers:
+      Host: www.calmlunch.com
+  udp: true
+- name: 19_[2.5M|353ms] TROJAN_🏁RELAY-162.159.228.224-0556
+  server: 162.159.228.224
   port: 443
   type: trojan
   password: humanity
@@ -177,61 +193,76 @@ proxies:
     headers:
       Host: www.pleadcourt.org
   udp: true
-- name: 19_[2.6M|527ms] TROJAN_🇩🇪DE-185.220.100.168-0476
-  server: 185.220.100.168
-  port: 443
-  type: trojan
-  password: humanity
-  sni: www.calmlunch.com
-  skip-cert-verify: true
-  network: ws
-  ws-opts:
-    path: '%2Fassignment'
-    headers:
-      Host: www.calmlunch.com
-  udp: true
-- name: 20_[2.1M|560ms] VLESS_乌克兰+V2CROSS.COM
-  type: vless
-  server: 5.181.158.193
-  port: 8461
-  uuid: 1c8f7130-8c1a-4949-831d-1d45b39c795b
-  tls: true
-  udp: true
-  skip-cert-verify: true
-  network: tcp
+- alpn:
+  - http/1.1
   client-fingerprint: chrome
-  flow: xtls-rprx-vision
-  servername: svoboda.bystriynet.online
-  reality-opts:
-    public-key: Yc75IKp6PRsGSw82GhGepMrRpJweW7WXUp9azkGuMAk
-    short-id: 735f09fb3fedb191
-- name: 21_[2.3M|604ms] TROJAN_🇫🇷 trojan-FR-...
+  encryption: none
+  name: '20_[2.3M|572ms] VLESS_🇫🇮 vless-FI-1... #2'
   network: ws
-  password: humanity
-  port: 443
-  server: 185.255.179.166
+  port: 465
+  server: hw3.divarkhaghazi.com
+  servername: hw3.divarkhaghazi.com.
   skip-cert-verify: true
-  sni: www.calmlunch.com
-  type: trojan
+  tls: true
+  type: vless
+  uuid: 924e20da-fcad-4e7e-8113-c62d27a0d01e
   ws-opts:
     headers:
-      Host: www.calmlunch.com
-    path: /assignment
+      Host: hw3.divarkhaghazi.com.
+    path: /
   udp: true
-- name: 22_[2.0M|614ms] TROJAN_🇯🇵 trojan-JP-...
-  password: e26a229d-e8f2-4ff9-8c7d-58a9d83ee437
-  port: 8886
+- name: 21_[2.2M|583ms] TROJAN_🇯🇵JP-45.32.52.173-0483
   server: 45.32.52.173
-  sni: 45.32.52.173
+  port: 8886
   type: trojan
+  password: e26a229d-e8f2-4ff9-8c7d-58a9d83ee437
+  sni: 45.32.52.173
   skip-cert-verify: true
   udp: true
-- name: 23_[1.7M|638ms] TROJAN_🇯🇵JP-43.167.186.78-0554
+- name: 22_[2.0M|605ms] TROJAN_🇯🇵JP-43.167.186.78-0554
   server: 43.167.186.78
   port: 8443
   type: trojan
   password: 9646699a-18b0-4ebc-9f53-453cc1c8e637
   sni: 43.167.186.78
+  skip-cert-verify: true
+  udp: true
+- name: 23_[1.6M|630ms] TROJAN_🇸🇬SG-139.180.146.200-0495
+  server: 139.180.146.200
+  port: 8886
+  type: trojan
+  password: e26a229d-e8f2-4ff9-8c7d-58a9d83ee437
+  skip-cert-verify: true
+  udp: true
+- alpn:
+  - h2
+  - http/1.1
+  client-fingerprint: chrome
+  name: '24_[1.6M|652ms] VLESS_🇭🇰 vless-HK-1... #3'
+  port: 11907
+  server: 195.58.144.56
+  skip-cert-verify: true
+  tls: true
+  type: vless
+  uuid: 07cb07b9-0c4d-46c1-a15a-b147511b6b07
+  udp: true
+- name: '25_[2.4M|881ms] TROJAN_🏳 trojan- #1'
+  password: 0ab6c98dae3b48e8b9c4a776b6c9c19a
+  port: 443
+  server: 64.176.163.182
+  skip-cert-verify: true
+  sni: exploreeducationsectoropportunitiestodayandadvancecareers.com
+  type: trojan
+  udp: true
+- name: 26_[1.6M|920ms] VLESS_🇰🇷 vless-KR-1...
+  network: ws
+  port: 25555
+  server: 152.69.226.63
+  tls: false
+  type: vless
+  uuid: 27c5483f-17f4-48ae-9a04-def53d88440d
+  ws-opts:
+    path: /
   skip-cert-verify: true
   udp: true
 proxy-groups:
@@ -243,55 +274,61 @@ proxy-groups:
   - 🇯🇵 日本专线
   - 🇺🇸 美国专线
   - 🇭🇰 亚太高速
-  - '01_[38.2M|501ms] TROJAN_🇺🇸 trojan-US-... #8'
-  - '02_[14.9M|477ms] TROJAN_🇺🇸 trojan-US-... #9'
-  - 03_[14.6M|480ms] TROJAN_🇺🇸US-216.152.155.23-0077
-  - '04_[10.7M|573ms] TROJAN_🇺🇸 trojan-US-... #11'
-  - '05_[10.2M|576ms] TROJAN_🇺🇸 trojan-US-... #1'
-  - '06_[10.1M|601ms] HYSTERIA2_🇺🇸 美国  USA #7'
-  - '07_[9.4M|525ms] TROJAN_🇺🇸 trojan-US-... #9'
-  - '08_[9.5M|570ms] TROJAN_🇺🇸 trojan-US-... #10'
-  - 09_[7.8M|531ms] TROJAN_🇺🇸US-66.163.114.114-0145
-  - '10_[5.7M|510ms] TROJAN_🇺🇸 trojan-US-... #4'
-  - '11_[5.8M|530ms] TROJAN_🇺🇸 trojan-US-... #4'
-  - 12_[5.1M|529ms] TROJAN_🇺🇸US-216.106.186.32-0080
-  - '13_[3.8M|306ms] TROJAN_🇫🇷 trojan-FR-... #3'
-  - 14_[3.7M|304ms] TROJAN_🏁RELAY-45.130.125.160-0475
-  - '15_[3.6M|319ms] VLESS_🇫🇷 vless-FR-1... #3'
-  - '16_[3.2M|425ms] TROJAN_🇫🇷 trojan-FR-... #3'
-  - '17_[3.2M|258ms] HYSTERIA2_Telegram@vpnjey #6'
-  - 18_[2.8M|483ms] TROJAN_🇩🇪DE-161.35.192.122-0486
-  - 19_[2.6M|527ms] TROJAN_🇩🇪DE-185.220.100.168-0476
-  - 20_[2.1M|560ms] VLESS_乌克兰+V2CROSS.COM
-  - 21_[2.3M|604ms] TROJAN_🇫🇷 trojan-FR-...
-  - 22_[2.0M|614ms] TROJAN_🇯🇵 trojan-JP-...
-  - 23_[1.7M|638ms] TROJAN_🇯🇵JP-43.167.186.78-0554
+  - 01_[53.0M|440ms] TROJAN_🇺🇸US-216.152.155.158-2452
+  - 02_[41.3M|441ms] TROJAN_🇺🇸US-216.152.155.176-0075
+  - '03_[40.6M|453ms] VLESS_🇺🇸 vless-US-1... #6'
+  - 04_[11.2M|470ms] TROJAN_🇺🇸US-66.163.114.166-0143
+  - 05_[15.4M|1227ms] TROJAN_🇺🇸US-66.163.122.25-0507
+  - 06_[11.1M|533ms] TROJAN_🇺🇸US-66.23.203.21-5372
+  - 07_[9.5M|548ms] TROJAN_🇺🇸US-216.152.156.65-0117
+  - 08_[9.5M|547ms] TROJAN_🇺🇸US-216.152.156.81-0078
+  - 09_[8.9M|602ms] TROJAN_🇺🇸US-169.197.140.214-0497
+  - 10_[9.1M|862ms] TROJAN_🇺🇸US-66.163.122.7-0134
+  - 11_[5.8M|510ms] TROJAN_🇺🇸US-66.163.112.242-0503
+  - '12_[5.8M|516ms] TROJAN_🇺🇸 trojan-US-... #10'
+  - 13_[3.2M|346ms] TROJAN_🏁RELAY-104.18.8.83-0901
+  - '14_[3.1M|362ms] TROJAN_🇫🇷 trojan-FR-... #5'
+  - 15_[3.0M|366ms] TROJAN_🏁RELAY-104.18.8.83-0473
+  - 16_[2.9M|381ms] TROJAN_🇪🇸ES-66.163.118.166-0193
+  - 17_[2.6M|426ms] VLESS_🇸🇪 瑞典  SWE 2
+  - 18_[2.7M|499ms] TROJAN_🇳🇱NL-45.87.41.18-0472
+  - 19_[2.5M|353ms] TROJAN_🏁RELAY-162.159.228.224-0556
+  - '20_[2.3M|572ms] VLESS_🇫🇮 vless-FI-1... #2'
+  - 21_[2.2M|583ms] TROJAN_🇯🇵JP-45.32.52.173-0483
+  - 22_[2.0M|605ms] TROJAN_🇯🇵JP-43.167.186.78-0554
+  - 23_[1.6M|630ms] TROJAN_🇸🇬SG-139.180.146.200-0495
+  - '24_[1.6M|652ms] VLESS_🇭🇰 vless-HK-1... #3'
+  - '25_[2.4M|881ms] TROJAN_🏳 trojan- #1'
+  - 26_[1.6M|920ms] VLESS_🇰🇷 vless-KR-1...
 - name: ⚡ 自动最快
   type: url-test
   proxies: &id001
-  - '01_[38.2M|501ms] TROJAN_🇺🇸 trojan-US-... #8'
-  - '02_[14.9M|477ms] TROJAN_🇺🇸 trojan-US-... #9'
-  - 03_[14.6M|480ms] TROJAN_🇺🇸US-216.152.155.23-0077
-  - '04_[10.7M|573ms] TROJAN_🇺🇸 trojan-US-... #11'
-  - '05_[10.2M|576ms] TROJAN_🇺🇸 trojan-US-... #1'
-  - '06_[10.1M|601ms] HYSTERIA2_🇺🇸 美国  USA #7'
-  - '07_[9.4M|525ms] TROJAN_🇺🇸 trojan-US-... #9'
-  - '08_[9.5M|570ms] TROJAN_🇺🇸 trojan-US-... #10'
-  - 09_[7.8M|531ms] TROJAN_🇺🇸US-66.163.114.114-0145
-  - '10_[5.7M|510ms] TROJAN_🇺🇸 trojan-US-... #4'
-  - '11_[5.8M|530ms] TROJAN_🇺🇸 trojan-US-... #4'
-  - 12_[5.1M|529ms] TROJAN_🇺🇸US-216.106.186.32-0080
-  - '13_[3.8M|306ms] TROJAN_🇫🇷 trojan-FR-... #3'
-  - 14_[3.7M|304ms] TROJAN_🏁RELAY-45.130.125.160-0475
-  - '15_[3.6M|319ms] VLESS_🇫🇷 vless-FR-1... #3'
-  - '16_[3.2M|425ms] TROJAN_🇫🇷 trojan-FR-... #3'
-  - '17_[3.2M|258ms] HYSTERIA2_Telegram@vpnjey #6'
-  - 18_[2.8M|483ms] TROJAN_🇩🇪DE-161.35.192.122-0486
-  - 19_[2.6M|527ms] TROJAN_🇩🇪DE-185.220.100.168-0476
-  - 20_[2.1M|560ms] VLESS_乌克兰+V2CROSS.COM
-  - 21_[2.3M|604ms] TROJAN_🇫🇷 trojan-FR-...
-  - 22_[2.0M|614ms] TROJAN_🇯🇵 trojan-JP-...
-  - 23_[1.7M|638ms] TROJAN_🇯🇵JP-43.167.186.78-0554
+  - 01_[53.0M|440ms] TROJAN_🇺🇸US-216.152.155.158-2452
+  - 02_[41.3M|441ms] TROJAN_🇺🇸US-216.152.155.176-0075
+  - '03_[40.6M|453ms] VLESS_🇺🇸 vless-US-1... #6'
+  - 04_[11.2M|470ms] TROJAN_🇺🇸US-66.163.114.166-0143
+  - 05_[15.4M|1227ms] TROJAN_🇺🇸US-66.163.122.25-0507
+  - 06_[11.1M|533ms] TROJAN_🇺🇸US-66.23.203.21-5372
+  - 07_[9.5M|548ms] TROJAN_🇺🇸US-216.152.156.65-0117
+  - 08_[9.5M|547ms] TROJAN_🇺🇸US-216.152.156.81-0078
+  - 09_[8.9M|602ms] TROJAN_🇺🇸US-169.197.140.214-0497
+  - 10_[9.1M|862ms] TROJAN_🇺🇸US-66.163.122.7-0134
+  - 11_[5.8M|510ms] TROJAN_🇺🇸US-66.163.112.242-0503
+  - '12_[5.8M|516ms] TROJAN_🇺🇸 trojan-US-... #10'
+  - 13_[3.2M|346ms] TROJAN_🏁RELAY-104.18.8.83-0901
+  - '14_[3.1M|362ms] TROJAN_🇫🇷 trojan-FR-... #5'
+  - 15_[3.0M|366ms] TROJAN_🏁RELAY-104.18.8.83-0473
+  - 16_[2.9M|381ms] TROJAN_🇪🇸ES-66.163.118.166-0193
+  - 17_[2.6M|426ms] VLESS_🇸🇪 瑞典  SWE 2
+  - 18_[2.7M|499ms] TROJAN_🇳🇱NL-45.87.41.18-0472
+  - 19_[2.5M|353ms] TROJAN_🏁RELAY-162.159.228.224-0556
+  - '20_[2.3M|572ms] VLESS_🇫🇮 vless-FI-1... #2'
+  - 21_[2.2M|583ms] TROJAN_🇯🇵JP-45.32.52.173-0483
+  - 22_[2.0M|605ms] TROJAN_🇯🇵JP-43.167.186.78-0554
+  - 23_[1.6M|630ms] TROJAN_🇸🇬SG-139.180.146.200-0495
+  - '24_[1.6M|652ms] VLESS_🇭🇰 vless-HK-1... #3'
+  - '25_[2.4M|881ms] TROJAN_🏳 trojan- #1'
+  - 26_[1.6M|920ms] VLESS_🇰🇷 vless-KR-1...
   url: https://cp.cloudflare.com/generate_204
   interval: 120
   tolerance: 30
@@ -305,32 +342,35 @@ proxy-groups:
 - name: 🇯🇵 日本专线
   type: url-test
   proxies:
-  - 22_[2.0M|614ms] TROJAN_🇯🇵 trojan-JP-...
-  - 23_[1.7M|638ms] TROJAN_🇯🇵JP-43.167.186.78-0554
+  - 21_[2.2M|583ms] TROJAN_🇯🇵JP-45.32.52.173-0483
+  - 22_[2.0M|605ms] TROJAN_🇯🇵JP-43.167.186.78-0554
   url: https://cp.cloudflare.com/generate_204
   interval: 120
   tolerance: 30
 - name: 🇺🇸 美国专线
   type: url-test
   proxies:
-  - '01_[38.2M|501ms] TROJAN_🇺🇸 trojan-US-... #8'
-  - '02_[14.9M|477ms] TROJAN_🇺🇸 trojan-US-... #9'
-  - 03_[14.6M|480ms] TROJAN_🇺🇸US-216.152.155.23-0077
-  - '04_[10.7M|573ms] TROJAN_🇺🇸 trojan-US-... #11'
-  - '05_[10.2M|576ms] TROJAN_🇺🇸 trojan-US-... #1'
-  - '06_[10.1M|601ms] HYSTERIA2_🇺🇸 美国  USA #7'
-  - '07_[9.4M|525ms] TROJAN_🇺🇸 trojan-US-... #9'
-  - '08_[9.5M|570ms] TROJAN_🇺🇸 trojan-US-... #10'
-  - 09_[7.8M|531ms] TROJAN_🇺🇸US-66.163.114.114-0145
-  - '10_[5.7M|510ms] TROJAN_🇺🇸 trojan-US-... #4'
-  - '11_[5.8M|530ms] TROJAN_🇺🇸 trojan-US-... #4'
-  - 12_[5.1M|529ms] TROJAN_🇺🇸US-216.106.186.32-0080
+  - 01_[53.0M|440ms] TROJAN_🇺🇸US-216.152.155.158-2452
+  - 02_[41.3M|441ms] TROJAN_🇺🇸US-216.152.155.176-0075
+  - '03_[40.6M|453ms] VLESS_🇺🇸 vless-US-1... #6'
+  - 04_[11.2M|470ms] TROJAN_🇺🇸US-66.163.114.166-0143
+  - 05_[15.4M|1227ms] TROJAN_🇺🇸US-66.163.122.25-0507
+  - 06_[11.1M|533ms] TROJAN_🇺🇸US-66.23.203.21-5372
+  - 07_[9.5M|548ms] TROJAN_🇺🇸US-216.152.156.65-0117
+  - 08_[9.5M|547ms] TROJAN_🇺🇸US-216.152.156.81-0078
+  - 09_[8.9M|602ms] TROJAN_🇺🇸US-169.197.140.214-0497
+  - 10_[9.1M|862ms] TROJAN_🇺🇸US-66.163.122.7-0134
+  - 11_[5.8M|510ms] TROJAN_🇺🇸US-66.163.112.242-0503
+  - '12_[5.8M|516ms] TROJAN_🇺🇸 trojan-US-... #10'
   url: https://cp.cloudflare.com/generate_204
   interval: 120
   tolerance: 30
 - name: 🇭🇰 亚太高速
   type: url-test
-  proxies: *id001
+  proxies:
+  - 23_[1.6M|630ms] TROJAN_🇸🇬SG-139.180.146.200-0495
+  - '24_[1.6M|652ms] VLESS_🇭🇰 vless-HK-1... #3'
+  - 26_[1.6M|920ms] VLESS_🇰🇷 vless-KR-1...
   url: https://cp.cloudflare.com/generate_204
   interval: 120
   tolerance: 30
