@@ -1,0 +1,57 @@
+name: VPN节点采集
+
+on:
+  workflow_dispatch:        # 支持手动随时触发
+  push:
+    paths:
+      - 'vpn.py'
+      - 'vpn_sources.txt'
+      - '.github/workflows/vpn.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  collect_vpn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 1. 检出仓库代码
+        uses: actions/checkout@v4
+
+      - name: 2. 配置 Python 环境与依赖
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pyyaml
+
+      - name: 3. 下载最新 Mihomo (Clash Meta) 内核
+        run: |
+          LATEST_URL=$(curl -s https://api.github.com/repos/MetaCubeX/mihomo/releases/latest \
+            | grep browser_download_url \
+            | grep "mihomo-linux-amd64-compatible" \
+            | grep "\.gz\"" \
+            | head -n 1 \
+            | cut -d '"' -f 4)
+          echo "Downloading Mihomo from: $LATEST_URL"
+          wget -q "$LATEST_URL" -O mihomo.gz
+          gunzip -f mihomo.gz
+          chmod +x mihomo
+
+      - name: 4. 执行节点采集与模拟国内测速 (vpn.py)
+        run: python vpn.py
+
+      - name: 5. 提交并推送生成的 vpn_clash.yaml
+        run: |
+          if [ -f "vpn_clash.yaml" ]; then
+            git config --local user.email "actions@github.com"
+            git config --local user.name "GitHub Actions"
+            git add vpn_clash.yaml
+            if ! git diff --staged --quiet; then
+              git commit -m "Auto update vpn_clash.yaml [skip ci]"
+              git pull --rebase origin ${{ github.ref_name }}
+              git push
+            else
+              echo "节点无变化，跳过提交。"
+            fi
+          fi
